@@ -1,0 +1,48 @@
+// Nabd API layer — uses the browser Fetch API.
+// Set VITE_API_URL in .env to your backend base URL.
+// Example: VITE_API_URL=https://api.example.com
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/+$/, "");
+
+export async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const body = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const message =
+      (body && typeof body === "object" && (body.message || body.error)) ||
+      `API request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return body;
+}
+
+// Authentication endpoints expected from the backend.
+export const login = (email, password) =>
+  apiFetch("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
+export const register = (name, email, password) =>
+  apiFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  });
+
+// Order endpoint expected from the backend.
+export const createOrder = (order) =>
+  apiFetch("/orders", {
+    method: "POST",
+    body: JSON.stringify(order),
+  });
